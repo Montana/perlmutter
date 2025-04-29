@@ -9,6 +9,6 @@
 
 module load python
 module load cray-mpich
-source activate your_mpi_env
+source activate mpi_env
 
 srun python mpi_script.py
