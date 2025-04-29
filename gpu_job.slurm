@@ -10,6 +10,6 @@
 
 module load python
 module load cudatoolkit
-source activate your_gpu_conda_env
+source activate conda_env 
 
 srun python gpu_script.py
