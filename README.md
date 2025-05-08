@@ -1,5 +1,7 @@
 # MPI Applications on NERSC's Perlmutter
 
+![Jadeite Rounded (3)](https://github.com/user-attachments/assets/73c9e853-9d2a-49e9-b7f7-160efb73a6b3)
+
 ## Introduction
 
 This repo provides detailed instructions for running Python-based MPI (Message Passing Interface) applications on the NERSC Perlmutter supercomputer. Perlmutter is a HPE Cray EX system featuring AMD EPYC processors and NVIDIA A100 GPUs, designed for large-scale scientific computing tasks.
