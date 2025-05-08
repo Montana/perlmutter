@@ -263,4 +263,4 @@ srun ddt --connect python mpi_script.py
 2. **MPI errors**: Verify module loads and environment settings
 3. **Out of memory**: Reduce problem size or request more nodes
 4. **Slow performance**: Check process binding and MPI communication patterns
-5. **File system issues**: Use $SCRATCH for temporary files, not $HOME
+5. **File system issues**: Use $SCRATCH for temporary files, not `$HOME`
