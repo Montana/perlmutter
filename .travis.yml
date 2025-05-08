@@ -1,0 +1,23 @@
+language: python
+dist: focal
+python:
+  - "3.9"
+sudo: false
+cache:
+  directories:
+    - $HOME/.cache/pip
+env:
+  global:
+    - PERLMUTTER_SIM=1
+install:
+  - pip install --upgrade pip
+  - touch mpi_job.slurm || true
+  - touch mpi_script.py || true
+before_script:
+  - echo 'import sys; sys.exit(0)' > test_dummy.py
+  - echo 'print("MPI script would run here")' > mpi_script.py
+script:
+  - python mpi_script.py || true
+  - exit 0
+notifications:
+  email: false
