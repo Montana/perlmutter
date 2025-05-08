@@ -47,7 +47,7 @@ module load cray-hdf5-parallel
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 export OMP_PLACES=threads
 export OMP_PROC_BIND=spread
-export MPICH_GPU_SUPPORT_ENABLED=1  # For GPU-aware MPI
+export MPICH_GPU_SUPPORT_ENABLED=1  
 
 source mpi_env
 
@@ -89,7 +89,6 @@ import socket
 import os
 
 def main():
-    # Initialize MPI environment
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     size = comm.Get_size()
@@ -169,7 +168,7 @@ To utilize GPU acceleration on Perlmutter, modify your SLURM script:
 
 ```bash
 #SBATCH --constraint=gpu
-#SBATCH --gpus-per-node=4  # Request all 4 GPUs per node
+#SBATCH --gpus-per-node=4  
 ```
 
 And add to your environment setup:
@@ -183,10 +182,10 @@ export MPICH_GPU_SUPPORT_ENABLED=1
 For CUDA-aware MPI with Python, ensure your script properly utilizes GPU resources:
 
 ```python
-import cupy as cp  # CUDA-accelerated NumPy-like package
+import cupy as cp  
 
 local_data = cp.random.rand(1000000) * rank
-local_sum = cp.sum(local_data).get()  # Convert back to CPU for MPI
+local_sum = cp.sum(local_data).get()  
 ```
 
 ## Performance Optimization Tips
