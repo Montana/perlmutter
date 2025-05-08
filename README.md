@@ -1,3 +1,4 @@
+[![Build Status](https://app.travis-ci.com/Montana/perlmutter.svg?token=U865GtC2ptqX3Ezf3Fzb&branch=master)](https://app.travis-ci.com/Montana/perlmutter)
 # MPI Applications on NERSC's Perlmutter
 
 ![Jadeite Rounded (3)](https://github.com/user-attachments/assets/73c9e853-9d2a-49e9-b7f7-160efb73a6b3)
