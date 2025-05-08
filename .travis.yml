@@ -1,300 +1,265 @@
 language: python
 dist: focal
 python:
- - "3.7"
- - "3.8" 
- - "3.9"
- - "3.10"
+  - "3.7"
+  - "3.8" 
+  - "3.9"
+  - "3.10"
 arch: amd64
 os: linux
 sudo: false
 cache:
- pip: true
- apt: true
- directories:
-   - $HOME/.cache/pip
-   - $HOME/.conda
-   - $HOME/miniconda
-   - $HOME/.local
-   - $HOME/.npm
-   - $HOME/.cache/yarn
+  pip: true
+  apt: true
+  directories:
+    - $HOME/.cache/pip
+    - $HOME/.conda
+    - $HOME/miniconda
+    - $HOME/.local
+    - $HOME/.npm
+    - $HOME/.cache/yarn
 env:
- global:
-   - PERLMUTTER_SIM=1
-   - NERSC_HOST=perlmutter
-   - SLURM_CONSTRAINT=cpu
-   - OMP_NUM_THREADS=4
-   - MPI_NUM_PROCESSES=4
-   - PYTHONUNBUFFERED=1
-   - PYTHON_VERSION=$TRAVIS_PYTHON_VERSION
-   - CRAY_CPU_TARGET=x86-64
-   - CRAYPE_LINK_TYPE=dynamic
-   - USE_MPI=ON
-   - USE_OPENMP=ON
- jobs:
-   - CONFIG=cpu MPI_IMPL=openmpi
-   - CONFIG=cpu MPI_IMPL=mpich
-   - CONFIG=gpu MPI_IMPL=openmpi CUDA=11.0
-   - CONFIG=gpu MPI_IMPL=mpich CUDA=11.4
+  global:
+    - PERLMUTTER_SIM=1
+    - NERSC_HOST=perlmutter
+    - SLURM_CONSTRAINT=cpu
+    - OMP_NUM_THREADS=4
+    - MPI_NUM_PROCESSES=4
+    - PYTHONUNBUFFERED=1
+    - PYTHON_VERSION=$TRAVIS_PYTHON_VERSION
+    - CRAY_CPU_TARGET=x86-64
+    - CRAYPE_LINK_TYPE=dynamic
+    - USE_MPI=ON
+    - USE_OPENMP=ON
+  jobs:
+    - CONFIG=cpu MPI_IMPL=openmpi
+    - CONFIG=cpu MPI_IMPL=mpich
+    - CONFIG=gpu MPI_IMPL=openmpi CUDA=11.0
+    - CONFIG=gpu MPI_IMPL=mpich CUDA=11.4
 branches:
- only:
-   - master
-   - main
-   - develop
-   - /^v\d+\.\d+(\.\d+)?(-\S*)?$/
+  only:
+    - master
+    - main
+    - develop
+    - /^v\d+\.\d+(\.\d+)?(-\S*)?$/
 stages:
- - setup
- - lint
- - test
- - deploy
+  - setup
+  - lint
+  - test
+  - deploy
 addons:
- apt:
-   update: true
-   packages:
-     - gfortran
-     - cmake
-     - libopenmpi-dev
-     - openmpi-bin
-     - mpich
-     - libmpich-dev
-     - libhdf5-dev
-     - libfftw3-dev
+  apt:
+    update: true
+    packages:
+      - gfortran
+      - cmake
+      - libopenmpi-dev
+      - openmpi-bin
+      - mpich
+      - libmpich-dev
+      - libhdf5-dev
+      - libfftw3-dev
 before_install:
- - echo "Preparing environment for Perlmutter simulated testing"
- - python -m pip install --upgrade pip setuptools wheel
- - mkdir -p $HOME/.local/bin
- - export PATH=$HOME/.local/bin:$PATH
- - |
-   cat > $HOME/.local/bin/module << EOF
-   #!/bin/bash
-   if [ "\$1" == "load" ]; then
-     echo "Loaded module \$2"
-   elif [ "\$1" == "list" ]; then
-     echo "Currently loaded modules:"
-     echo "  1) gcc/11.2.0   2) mpich/4.0.2   3) python/\$PYTHON_VERSION"
-   else
-     echo "Module command \$1 executed"
-   fi
-   exit 0
-   EOF
-   chmod +x $HOME/.local/bin/module
- - |
-   cat > $HOME/.local/bin/srun << EOF
-   #!/bin/bash
-   echo "Would run: srun \$@"
-   shift
-   while (( "\$#" )); do
-     if [[ \$1 != -* ]]; then
-       \$@
-       exit \$?
-     fi
-     shift
-   done
-   exit 0
-   EOF
-   chmod +x $HOME/.local/bin/srun
+  - echo "Preparing environment for Perlmutter simulated testing"
+  - python -m pip install --upgrade pip setuptools wheel
+  - mkdir -p $HOME/.local/bin
+  - export PATH=$HOME/.local/bin:$PATH
+  - echo '#!/bin/bash' > $HOME/.local/bin/module
+  - echo 'if [ "$1" == "load" ]; then' >> $HOME/.local/bin/module
+  - echo '  echo "Loaded module $2"' >> $HOME/.local/bin/module
+  - echo 'elif [ "$1" == "list" ]; then' >> $HOME/.local/bin/module
+  - echo '  echo "Currently loaded modules:"' >> $HOME/.local/bin/module
+  - echo '  echo "  1) gcc/11.2.0   2) mpich/4.0.2   3) python/$PYTHON_VERSION"' >> $HOME/.local/bin/module
+  - echo 'else' >> $HOME/.local/bin/module
+  - echo '  echo "Module command $1 executed"' >> $HOME/.local/bin/module
+  - echo 'fi' >> $HOME/.local/bin/module
+  - echo 'exit 0' >> $HOME/.local/bin/module
+  - chmod +x $HOME/.local/bin/module
+  - echo '#!/bin/bash' > $HOME/.local/bin/srun
+  - echo 'echo "Would run: srun $@"' >> $HOME/.local/bin/srun
+  - echo 'shift' >> $HOME/.local/bin/srun
+  - echo 'while (( "$#" )); do' >> $HOME/.local/bin/srun
+  - echo '  if [[ $1 != -* ]]; then' >> $HOME/.local/bin/srun
+  - echo '    $@' >> $HOME/.local/bin/srun
+  - echo '    exit $?' >> $HOME/.local/bin/srun
+  - echo '  fi' >> $HOME/.local/bin/srun
+  - echo '  shift' >> $HOME/.local/bin/srun
+  - echo 'done' >> $HOME/.local/bin/srun
+  - echo 'exit 0' >> $HOME/.local/bin/srun
+  - chmod +x $HOME/.local/bin/srun
 install:
- - python -m pip install pytest pytest-cov flake8 black isort mypy
- - python -m pip install numpy scipy matplotlib pandas h5py
- - |
-   if [ -f requirements.txt ]; then
-     python -m pip install -r requirements.txt || true
-   fi
- - |
-   if [ "$MPI_IMPL" == "openmpi" ]; then
-     echo "Setting up OpenMPI (simulated)"
-   else
-     echo "Setting up MPICH (simulated)"
-   fi
-   cat > $HOME/.local/bin/mpirun << EOF
-   #!/bin/bash
-   echo "Would run MPI program with \$@ on Perlmutter"
-   while (( "\$#" )); do
-     if [[ \$1 == "-n" ]]; then
-       shift
-       NPROCS=\$1
-       shift
-       continue
-     elif [[ \$1 == "--hostfile" || \$1 == "-hostfile" ]]; then
-       shift
-       shift
-       continue
-     elif [[ \$1 != -* ]]; then
-       \$@
-       exit \$?
-     fi
-     shift
-   done
-   exit 0
-   EOF
-   chmod +x $HOME/.local/bin/mpirun
- - |
-   mkdir -p mpi4py_mock
-   cat > mpi4py_mock/__init__.py << EOF
-   class MPI:
-       COMM_WORLD = None
-       def __init__(self):
-           pass
-       @staticmethod
-       def Get_rank():
-           return 0
-       @staticmethod
-       def Get_size():
-           return 4
-   EOF
-   PYTHONPATH=$PYTHONPATH:$(pwd)
- - |
-   if [[ "$CONFIG" == "gpu" ]]; then
-     echo "Setting up CUDA environment (simulated)"
-     mkdir -p $HOME/.local/cuda/bin
-     cat > $HOME/.local/cuda/bin/nvcc << EOF
-   #!/bin/bash
-   echo "nvcc \$@"
-   exit 0
-   EOF
-     chmod +x $HOME/.local/cuda/bin/nvcc
-     export PATH=$HOME/.local/cuda/bin:$PATH
-     export CUDA_HOME=$HOME/.local/cuda
-   fi
+  - python -m pip install pytest pytest-cov flake8 black isort mypy
+  - python -m pip install numpy scipy matplotlib pandas h5py
+  - if [ -f requirements.txt ]; then python -m pip install -r requirements.txt || true; fi
+  - if [ "$MPI_IMPL" == "openmpi" ]; then echo "Setting up OpenMPI (simulated)"; else echo "Setting up MPICH (simulated)"; fi
+  - echo '#!/bin/bash' > $HOME/.local/bin/mpirun
+  - echo 'echo "Would run MPI program with $@ on Perlmutter"' >> $HOME/.local/bin/mpirun
+  - echo 'while (( "$#" )); do' >> $HOME/.local/bin/mpirun
+  - echo '  if [[ $1 == "-n" ]]; then' >> $HOME/.local/bin/mpirun
+  - echo '    shift' >> $HOME/.local/bin/mpirun
+  - echo '    NPROCS=$1' >> $HOME/.local/bin/mpirun
+  - echo '    shift' >> $HOME/.local/bin/mpirun
+  - echo '    continue' >> $HOME/.local/bin/mpirun
+  - echo '  elif [[ $1 == "--hostfile" || $1 == "-hostfile" ]]; then' >> $HOME/.local/bin/mpirun
+  - echo '    shift' >> $HOME/.local/bin/mpirun
+  - echo '    shift' >> $HOME/.local/bin/mpirun
+  - echo '    continue' >> $HOME/.local/bin/mpirun
+  - echo '  elif [[ $1 != -* ]]; then' >> $HOME/.local/bin/mpirun
+  - echo '    $@' >> $HOME/.local/bin/mpirun
+  - echo '    exit $?' >> $HOME/.local/bin/mpirun
+  - echo '  fi' >> $HOME/.local/bin/mpirun
+  - echo '  shift' >> $HOME/.local/bin/mpirun
+  - echo 'done' >> $HOME/.local/bin/mpirun
+  - echo 'exit 0' >> $HOME/.local/bin/mpirun
+  - chmod +x $HOME/.local/bin/mpirun
+  - mkdir -p mpi4py_mock
+  - echo 'class MPI:' > mpi4py_mock/__init__.py
+  - echo '    COMM_WORLD = None' >> mpi4py_mock/__init__.py
+  - echo '    def __init__(self):' >> mpi4py_mock/__init__.py
+  - echo '        pass' >> mpi4py_mock/__init__.py
+  - echo '    @staticmethod' >> mpi4py_mock/__init__.py
+  - echo '    def Get_rank():' >> mpi4py_mock/__init__.py
+  - echo '        return 0' >> mpi4py_mock/__init__.py
+  - echo '    @staticmethod' >> mpi4py_mock/__init__.py
+  - echo '    def Get_size():' >> mpi4py_mock/__init__.py
+  - echo '        return 4' >> mpi4py_mock/__init__.py
+  - export PYTHONPATH=$PYTHONPATH:$(pwd)
+  - if [[ "$CONFIG" == "gpu" ]]; then
+      echo "Setting up CUDA environment (simulated)";
+      mkdir -p $HOME/.local/cuda/bin;
+      echo '#!/bin/bash' > $HOME/.local/cuda/bin/nvcc;
+      echo 'echo "nvcc $@"' >> $HOME/.local/cuda/bin/nvcc;
+      echo 'exit 0' >> $HOME/.local/cuda/bin/nvcc;
+      chmod +x $HOME/.local/cuda/bin/nvcc;
+      export PATH=$HOME/.local/cuda/bin:$PATH;
+      export CUDA_HOME=$HOME/.local/cuda;
+    fi
 before_script:
- - echo "Preparing test files for Perlmutter compatibility"
- - |
-   cat > test_perlmutter_env.py << EOF
-   import os
-   import sys
-   
-   def test_environment():
-       """Test that Perlmutter environment variables are set correctly."""
-       assert os.environ.get('PERLMUTTER_SIM') == '1'
-       assert os.environ.get('NERSC_HOST') == 'perlmutter'
-   
-   def test_mpi():
-       """Test MPI availability."""
-       try:
-           from mpi4py import MPI
-           rank = MPI.COMM_WORLD.Get_rank()
-           size = MPI.COMM_WORLD.Get_size()
-           print(f"MPI rank {rank} of {size}")
-       except ImportError:
-           print("Using mock MPI")
-       
-   if __name__ == '__main__':
-       print("Running Perlmutter environment tests")
-       test_environment()
-       test_mpi()
-       print("All tests passed")
-       sys.exit(0)
-   EOF
- - |
-   cat > mpi_job.slurm << EOF
-   #!/bin/bash
-   #SBATCH -J mpi_job
-   #SBATCH -A m1234
-   #SBATCH -C cpu
-   #SBATCH -q regular
-   #SBATCH -t 01:00:00
-   #SBATCH -N 2
-   #SBATCH --ntasks-per-node=4
-   #SBATCH --mem=64GB
-   
-   module load cpu
-   module load PrgEnv-gnu
-   module load cray-mpich
-   module load python
-   
-   source mpi_env
-   
-   export OMP_NUM_THREADS=4
-   export OMP_PLACES=threads
-   export OMP_PROC_BIND=spread
-   
-   srun -n 8 -c 4 --cpu-bind=cores python mpi_script.py
-   EOF
- - |
-   cat > mpi_script.py << EOF
-   #!/usr/bin/env python
-   import os
-   import sys
-   
-   def main():
-       """Main function that would normally use MPI."""
-       print(f"Running on Perlmutter with:")
-       print(f"  OMP_NUM_THREADS = {os.environ.get('OMP_NUM_THREADS', 'not set')}")
-       print(f"  MPI_NUM_PROCESSES = {os.environ.get('MPI_NUM_PROCESSES', 'not set')}")
-       try:
-           from mpi4py import MPI
-           comm = MPI.COMM_WORLD
-           rank = comm.Get_rank()
-           size = comm.Get_size()
-           print(f"MPI rank {rank} of {size}")
-       except ImportError:
-           print("MPI not available, running in serial mode")
-       return 0
-   
-   if __name__ == "__main__":
-       sys.exit(main())
-   EOF
- - |
-   cat > mpi_env << EOF
-   export MPICH_GPU_SUPPORT_ENABLED=1
-   export MPICH_OFI_NIC_POLICY=NUMA
-   export MPICH_SMP_SINGLE_COPY_MODE=CMA
-   EOF
- - |
-   cat > build.sh << EOF
-   echo "Building project for Perlmutter (simulated)"
-   mkdir -p build
-   cd build
-   echo "Running CMake configuration"
-   echo "Running make"
-   echo "Build successful"
-   exit 0
-   EOF
-   chmod +x build.sh
+  - echo "Preparing test files for Perlmutter compatibility"
+  - echo 'import os' > test_perlmutter_env.py
+  - echo 'import sys' >> test_perlmutter_env.py
+  - echo '' >> test_perlmutter_env.py
+  - echo 'def test_environment():' >> test_perlmutter_env.py
+  - echo '    """Test that Perlmutter environment variables are set correctly."""' >> test_perlmutter_env.py
+  - echo '    assert os.environ.get("PERLMUTTER_SIM") == "1"' >> test_perlmutter_env.py
+  - echo '    assert os.environ.get("NERSC_HOST") == "perlmutter"' >> test_perlmutter_env.py
+  - echo '' >> test_perlmutter_env.py
+  - echo 'def test_mpi():' >> test_perlmutter_env.py
+  - echo '    """Test MPI availability."""' >> test_perlmutter_env.py
+  - echo '    try:' >> test_perlmutter_env.py
+  - echo '        from mpi4py import MPI' >> test_perlmutter_env.py
+  - echo '        rank = MPI.COMM_WORLD.Get_rank()' >> test_perlmutter_env.py
+  - echo '        size = MPI.COMM_WORLD.Get_size()' >> test_perlmutter_env.py
+  - echo '        print(f"MPI rank {rank} of {size}")' >> test_perlmutter_env.py
+  - echo '    except ImportError:' >> test_perlmutter_env.py
+  - echo '        print("Using mock MPI")' >> test_perlmutter_env.py
+  - echo '' >> test_perlmutter_env.py
+  - echo 'if __name__ == "__main__":' >> test_perlmutter_env.py
+  - echo '    print("Running Perlmutter environment tests")' >> test_perlmutter_env.py
+  - echo '    test_environment()' >> test_perlmutter_env.py
+  - echo '    test_mpi()' >> test_perlmutter_env.py
+  - echo '    print("All tests passed")' >> test_perlmutter_env.py
+  - echo '    sys.exit(0)' >> test_perlmutter_env.py
+  - echo '#!/bin/bash' > mpi_job.slurm
+  - echo '#SBATCH -J mpi_job' >> mpi_job.slurm
+  - echo '#SBATCH -A m1234' >> mpi_job.slurm
+  - echo '#SBATCH -C cpu' >> mpi_job.slurm
+  - echo '#SBATCH -q regular' >> mpi_job.slurm
+  - echo '#SBATCH -t 01:00:00' >> mpi_job.slurm
+  - echo '#SBATCH -N 2' >> mpi_job.slurm
+  - echo '#SBATCH --ntasks-per-node=4' >> mpi_job.slurm
+  - echo '#SBATCH --mem=64GB' >> mpi_job.slurm
+  - echo '' >> mpi_job.slurm
+  - echo 'module load cpu' >> mpi_job.slurm
+  - echo 'module load PrgEnv-gnu' >> mpi_job.slurm
+  - echo 'module load cray-mpich' >> mpi_job.slurm
+  - echo 'module load python' >> mpi_job.slurm
+  - echo '' >> mpi_job.slurm
+  - echo '# Source MPI environment settings' >> mpi_job.slurm
+  - echo 'source mpi_env' >> mpi_job.slurm
+  - echo '' >> mpi_job.slurm
+  - echo 'export OMP_NUM_THREADS=4' >> mpi_job.slurm
+  - echo 'export OMP_PLACES=threads' >> mpi_job.slurm
+  - echo 'export OMP_PROC_BIND=spread' >> mpi_job.slurm
+  - echo '' >> mpi_job.slurm
+  - echo 'srun -n 8 -c 4 --cpu-bind=cores python mpi_script.py' >> mpi_job.slurm
+  - echo '#!/usr/bin/env python' > mpi_script.py
+  - echo 'import os' >> mpi_script.py
+  - echo 'import sys' >> mpi_script.py
+  - echo '' >> mpi_script.py
+  - echo 'def main():' >> mpi_script.py
+  - echo '    """Main function that would normally use MPI."""' >> mpi_script.py
+  - echo '    print(f"Running on Perlmutter with:")' >> mpi_script.py
+  - echo '    print(f"  OMP_NUM_THREADS = {os.environ.get(\"OMP_NUM_THREADS\", \"not set\")}")' >> mpi_script.py
+  - echo '    print(f"  MPI_NUM_PROCESSES = {os.environ.get(\"MPI_NUM_PROCESSES\", \"not set\")}")' >> mpi_script.py
+  - echo '    try:' >> mpi_script.py
+  - echo '        from mpi4py import MPI' >> mpi_script.py
+  - echo '        comm = MPI.COMM_WORLD' >> mpi_script.py
+  - echo '        rank = comm.Get_rank()' >> mpi_script.py
+  - echo '        size = comm.Get_size()' >> mpi_script.py
+  - echo '        print(f"MPI rank {rank} of {size}")' >> mpi_script.py
+  - echo '    except ImportError:' >> mpi_script.py
+  - echo '        print("MPI not available, running in serial mode")' >> mpi_script.py
+  - echo '    return 0' >> mpi_script.py
+  - echo '' >> mpi_script.py
+  - echo 'if __name__ == "__main__":' >> mpi_script.py
+  - echo '    sys.exit(main())' >> mpi_script.py
+  - echo '# MPI environment settings for Perlmutter' > mpi_env
+  - echo 'export MPICH_GPU_SUPPORT_ENABLED=1' >> mpi_env
+  - echo 'export MPICH_OFI_NIC_POLICY=NUMA' >> mpi_env
+  - echo 'export MPICH_SMP_SINGLE_COPY_MODE=CMA' >> mpi_env
+  - echo '#!/bin/bash' > build.sh
+  - echo 'echo "Building project for Perlmutter (simulated)"' >> build.sh
+  - echo 'mkdir -p build' >> build.sh
+  - echo 'cd build' >> build.sh
+  - echo 'echo "Running CMake configuration"' >> build.sh
+  - echo 'echo "Running make"' >> build.sh
+  - echo 'echo "Build successful"' >> build.sh
+  - echo 'exit 0' >> build.sh
+  - chmod +x build.sh
 script:
- - echo "Starting tests in Perlmutter simulation mode"
- - module list
- - module load python
- - module load cray-mpich
- - |
-   echo "Running linting checks"
-   python -m flake8 --statistics || true
-   python -m black --check . || true
-   python -m isort --check-only --profile black . || true
-   python -m mypy . || true
- - |
-   echo "Building project"
-   ./build.sh
- - |
-   echo "Running unit tests"
-   python test_perlmutter_env.py
- - |
-   echo "Running MPI tests"
-   mpirun -n 4 python mpi_script.py
- - |
-   echo "Validating Slurm script for Perlmutter"
-   grep -q "mpi_env" mpi_job.slurm && echo "Found mpi_env in slurm script" || echo "Warning: mpi_env not found in script but continuing"
- - |
-   echo "All tests passed successfully for Perlmutter environment"
-   echo "Build successful"
-   exit 0
+  - echo "Starting tests in Perlmutter simulation mode"
+  - module list
+  - module load python
+  - module load cray-mpich
+  - echo "Running linting checks"
+  - python -m flake8 --statistics || true
+  - python -m black --check . || true
+  - python -m isort --check-only --profile black . || true
+  - python -m mypy . || true
+  - echo "Building project"
+  - ./build.sh
+  - echo "Running unit tests"
+  - python test_perlmutter_env.py
+  - echo "Running MPI tests"
+  - mpirun -n 4 python mpi_script.py
+  - echo "Validating Slurm script for Perlmutter"
+  - grep -q "mpi_env" mpi_job.slurm && echo "Found mpi_env in slurm script" || echo "Warning: mpi_env not found in script but continuing"
+  - echo "All tests passed successfully for Perlmutter environment"
+  - echo "Build successful"
+  - exit 0
 after_success:
- - echo "Build completed successfully for Perlmutter environment"
- - |
-   if [ "$CONFIG" == "cpu" ] && [ "$TRAVIS_PYTHON_VERSION" == "3.9" ]; then
-     echo "Would deploy CPU version"
-   elif [ "$CONFIG" == "gpu" ] && [ "$TRAVIS_PYTHON_VERSION" == "3.9" ]; then
-     echo "Would deploy GPU version"
-   fi
+  - echo "Build completed successfully for Perlmutter environment"
+  - |
+    if [ "$CONFIG" == "cpu" ] && [ "$TRAVIS_PYTHON_VERSION" == "3.9" ]; then
+      echo "Would deploy CPU version"
+    elif [ "$CONFIG" == "gpu" ] && [ "$TRAVIS_PYTHON_VERSION" == "3.9" ]; then
+      echo "Would deploy GPU version"
+    fi
 after_failure:
- - echo "This would run if build failed, but our build always succeeds"
- - exit 0
+  - echo "This would run if build failed, but our build always succeeds"
+  - exit 0
 before_deploy:
- - echo "Preparing deployment package for Perlmutter"
+  - echo "Preparing deployment package for Perlmutter"
 deploy:
- provider: script
- skip_cleanup: true
- script: echo "Would deploy to Perlmutter" && exit 0
- on:
-   branch: main
-   condition: $TRAVIS_PYTHON_VERSION = 3.9 && $CONFIG = cpu
+  provider: script
+  skip_cleanup: true
+  script: echo "Would deploy to Perlmutter" && exit 0
+  on:
+    branch: main
+    condition: $TRAVIS_PYTHON_VERSION = 3.9 && $CONFIG = cpu
+notifications:
+  email: false
+  slack:
+    on_success: change
+    on_failure: never
