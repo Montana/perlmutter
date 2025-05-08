@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This document provides detailed instructions for running Python-based MPI (Message Passing Interface) applications on the NERSC Perlmutter supercomputer. Perlmutter is a HPE Cray EX system featuring AMD EPYC processors and NVIDIA A100 GPUs, designed for large-scale scientific computing tasks.
+This repo provides detailed instructions for running Python-based MPI (Message Passing Interface) applications on the NERSC Perlmutter supercomputer. Perlmutter is a HPE Cray EX system featuring AMD EPYC processors and NVIDIA A100 GPUs, designed for large-scale scientific computing tasks.
 
 ## System Overview
 
