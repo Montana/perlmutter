@@ -1,4 +1,4 @@
-# Comprehensive Guide to Running MPI Applications on NERSC Perlmutter Supercomputer
+# MPI Applications on NERSC's Perlmutter
 
 ## Introduction
 
